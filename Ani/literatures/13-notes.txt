@@ -1,0 +1,5 @@
+how to find the true Pareto-optimal set? not mensioned.
+
+The alg. is understood.
+
+a brief summery of the steps is necessary

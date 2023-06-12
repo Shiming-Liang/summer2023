@@ -1,0 +1,24 @@
+problem
+- clarify the problem
+-- input: interesting points from multiple users
+-- output: a trajectory
+
+- any preliminary results?
+
+- how to evaluate the performance? user feedback from the geologists? design the performance metric, and user study
+
+- find the data of the geo proj in the shared folder
+
+gaussian process
+
+a possible implementation:
+- use kernal functions to generate a response surface: users define weights, variance for each points(ask for circles instead of points), we define weight for each users(can be adaptive as the one in the paper: the user that make a more correct choice has higher weight)
+- choose the global optima(scipy optimize) to be the curr waypoint
+- panelize this point with a kernel function of certain weight(such that the response surface at this point has value 0) and variance(given by the sensor of the robot)
+- panelize the whole response surface with a kernel function of distance to the curr traj
+- find the global optima and loop until the traj length limit is reached
+
+kernel function candidates:
+- Gaussian(mix and match interest points)
+- Inverse quadratic
+- Inverse multiquadric(easier to find global maximum)

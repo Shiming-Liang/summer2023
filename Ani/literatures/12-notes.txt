@@ -1,0 +1,8 @@
+maximize the benefits in all the objectives: in what sense do you mean?
+
+bj1 and bj2: 2 obj.
+
+how well the code is written largely impart exec time
+
+hardware difference
+

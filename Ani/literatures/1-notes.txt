@@ -1,0 +1,19 @@
+user interest = reward
+
+constraints: path length, start 's', end 't'
+
+obj func: cumulated reward, not the same as the wanted one
+
+Si is point or set? what does the |.| means? Answer: points, number of points
+
+r disappeared for r << distance between points
+
+design of the scores: by fairness, by dominence, by distance
+
+the choice of f is pretty dominating ~= 3 different strategy
+
+questions: optimality? evaluated using user feedback
+
+straight forward algorithm, interesting experiment
+
+what more can we do? multi-user single agent to multi-user multi agents: need to figure out the deligation of tasks

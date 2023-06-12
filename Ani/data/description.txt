@@ -1,0 +1,11 @@
+PFA
+
+5 is low uncertainty/ high certainty
+
+Attchedness is whether or not the rock at surface is attached to the bedrock (if this is low then geologists will not trust any spatial measurement).
+
+Lithology is what type of rock is observed.
+
+Geometry is spatial data such as the 3-D orientation of a feature in the rock (e strike and dip data of bedding orientation). 
+
+Both Lithology and geometry would be used by geologists to estimate rock properties in areas where there is no data, but on a map lithology would be shown as a colored region without specifying where the observations were made to fill in the rock type and geometry would be shown as point data (strike and dip) or as a line where a feature intersected the surface.

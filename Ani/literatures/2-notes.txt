@@ -1,0 +1,10 @@
+title: Reinforcement learning for the traveling salesman problem with
+refueling
+
+problem: Traveling salesman problem with refueling
+
+approach: Q-learning, SARSA
+
+Results: it works, a lot of params tuning
+
+inspiration: RL works, search space is huge due to np hard, but not unreasonable, but the definition of the states and actions need to be designed

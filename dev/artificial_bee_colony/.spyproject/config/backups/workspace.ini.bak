@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['Hive-master/Example1_Rosenbrock.py', 'Hive-master/Hive/Hive.py', 'Hive-master/Example2_Rastrigin.py', 'Hive-master/Example3_EvolveAPainting.py']
+recent_files = ['Hive-master/Hive/Hive.py']
 
 [main]
 version = 0.2.0

@@ -1,0 +1,21 @@
+work routines: slack, meeting each week?
+
+what I did: poke around tsp, found TOP, very close to what we want, lots of combinatory opt and mixed int opt, but very promising to work
+
+a possible approach: RL, the search space is huge, the definition of states and actions seems non trivial
+
+help paul on the meam620 codes
+
+data processing: the def of the uncertainty(determine what the reward structure looks like), permutation of the missing data(based on some sort of KNN like the netflix rec system)
+
+plan: deal with the data processing, read the 2 survey on TOP, implement some classic TOP alg, string them all together, then decide what is next
+
+plan to do a scatch on how it works and how it maps into the paper of multiple objectives, the missing data is not a thing to consider for the moment
+
+OP goes first
+
+simulate another dataset simple enough to validate
+
+identify background to learn about: ant colony optimization, OP
+
+plan with sandeep next week, Wed the week after 
