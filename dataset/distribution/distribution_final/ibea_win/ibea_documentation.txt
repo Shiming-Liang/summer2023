@@ -1,0 +1,138 @@
+========================================================================
+PISA  (www.tik.ee.ethz.ch/pisa/)
+========================================================================
+Computer Engineering (TIK)
+ETH Zurich	 
+========================================================================
+IBEA - Indicator-Based Evolutionary Algorithm
+
+Implementation in C for the selector side.
+
+Documentation
+  
+file: ibea_documentation.txt
+author: Eckart Zitzler, zitzler@tik.ee.ethz.ch
+last change: $date$
+========================================================================
+
+
+
+The Optimizer
+=============
+
+IBEA is an multiobjective evolutionary algorithm that calculates fitness
+values by comparing individuals on the basis of a quality indicator. Thereby,
+no particular diversity preservation techniques such as fitness sharing,
+clustering, etc. is necessary. The algorithm has been proposed in:
+
+@InProceedings{ZK2004a,
+  author =       {Eckart Zitzler and Simon K{\"u}nzli}
+  title =        {Indicator-Based Selection in Multiobjective Search},
+  booktitle =    {Parallel Problem Solving from Nature (PPSN VIII)},
+  pages =        {832--842},
+  year =         2004,
+  editor =       {Xin Yao and others},
+  address =      {Berlin, Germany},
+  publisher =    {Springer-Verlag}
+}
+
+As in the paper, the implementation includes two quality indicators: the
+additive epsilon indicator and the hypervolume indicator.
+
+
+The Parameters
+==============
+
+IBEA uses the following values for the common parameters.
+These parameters are specified in 'PISA_cfg'.
+
+alpha    (population size)
+mu       (number of parent individuals)
+lambda   (number of offspring individuals)
+dim      (number of objectives)
+
+'PISA_cfg' is a PISA_configuration file.
+
+IBEA takes two five parameters which are specified in a parameter
+file. The name of this parameter file is passed to IBEA as command
+line argument. (See 'ibea_param.txt' for an example.)
+
+seed         (seed for the random number generator)
+tournament   (tournament size for mating selection)
+indicator    (0 = additive epsilon indicator, 1 = hypervolume indicator)
+kappa        (scaling factor kappa as described in the paper)
+rho          (reference point for the hypervolume calculation; for instance,
+              setting rho to 2, defines the reference point (2,2,2) in the
+              case of three objectives; rho must not be smaller than 1)
+
+
+Source Files
+============
+
+The source code for IBEA is divided into four files:
+
+'ibea.h' is the header file.
+
+'ibea.c' contains the main function and implements the control flow.
+
+'ibea_io.c' implements the file i/o functions.
+
+'ibea_functions.c' implements all other functions including the
+selection.
+
+Additionally a Makefile, a PISA_configuration file with common
+parameters and a PISA_parameter file with local parameters are
+contained in the tar file.
+
+Depending on whether you compile on Windows or on Unix (any OS having
+<unistd.h>) uncomment the according '#define' in the 'ibea.h' file.
+
+
+
+Usage
+=====
+
+Start IBEA with the following arguments:
+
+ibea paramfile filenamebase poll
+
+paramfile: specifies the name of the file containing the local
+parameters (e.g. ibea_param.txt)
+
+filenamebase: specifies the name (and optionally the directory) of the
+communication files. The filenames of the communication files and the
+configuration file are built by appending 'sta', 'var', 'sel','ini',
+'arc' and 'cfg' to the filenamebase. This gives the following names for
+the 'PISA_' filenamebase:
+
+PISA_cfg - configuration file
+PISA_ini - initial population
+PISA_sel - individuals selected for variation (PISA_
+PISA_var - variated individuals (offspring)
+PISA_arc - individuals in the archive
+
+
+Caution: the filenamebase must be consistent with the name of
+the configuration file and the filenamebase specified for the IBEA
+module.
+
+poll: gives the value for the polling time in seconds (e.g. 0.5). This
+      polling time must be larger than 0.01 seconds.
+
+
+
+Limitations
+===========
+
+None limitations are known so far.
+
+
+
+Stopping and Resetting
+======================
+
+The behaviour in state 5 and 9 is not determined by the interface but
+by each variator module specifically. IBEA behaves as follows:
+
+state 5 (= variator terminated): set state to 6 (terminate as well).
+state 9 (= variator resetted): set state to 10 (reset as well).

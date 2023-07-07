@@ -1,0 +1,9 @@
+seed 1674838015
+length 500
+maxgen 1000
+outputfile knapsack_output.txt
+mutation_type 1
+recombination_type 1
+mutation_probability 1
+recombination_probability 0.8
+bit_turn_probability 0.008

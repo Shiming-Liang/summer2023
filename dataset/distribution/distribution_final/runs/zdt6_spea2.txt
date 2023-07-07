@@ -1,0 +1,50 @@
+start commandLine
+../zdt6_linux/zdt6_param.txt ../zdt6_linux/PISA_ ../spea2_linux/spea2_param.txt ../spea2_linux/PISA_ monitor_param.txt ../runs/zdt6_spea2 0.1
+end commandLine
+
+start monParameter
+seed 23
+numberOfRuns 4
+numberOfGenerations 2
+outputType offline
+outputSet 1
+debug 1
+
+end monParameter
+
+start varCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 2
+
+end varCommonParameter
+
+start varParameter
+problem ZDT6
+seed 739593873
+number_decision_variables 100
+maxgen 1000
+outputfile dtlz_output.txt
+individual_mutation_probability 1
+individual_recombination_probability 1
+variable_mutation_probability 0.01
+variable_swap_probability 0.5
+variable_recombination_probability 1
+eta_mutation 20
+eta_recombination 15
+
+end varParameter
+
+start selCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 2
+
+end selCommonParameter
+
+start selParameter
+seed 11
+tournament 2
+end selParameter

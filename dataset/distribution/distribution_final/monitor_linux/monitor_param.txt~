@@ -1,0 +1,9 @@
+seed 23
+
+numberOfRuns 2
+numberOfGenerations 2
+outputType offline
+
+outputSet 0
+
+debug 1

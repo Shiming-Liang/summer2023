@@ -1,0 +1,47 @@
+start commandLine
+../knapsack_linux/knapsack_param.txt ../knapsack_linux/PISA_ ../spea2_linux/spea2_param.txt ../spea2_linux/PISA_ monitor_param.txt ../runs/knapsack_spea2 0.1
+end commandLine
+
+start monParameter
+seed 23
+numberOfRuns 31
+numberOfGenerations 200
+outputType offline
+outputSet 1
+debug 1
+
+end monParameter
+
+start varCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 2
+
+end varCommonParameter
+
+start varParameter
+seed 1253077814
+length 500
+maxgen 1000
+outputfile knapsack_output.txt
+mutation_type 1
+recombination_type 1
+mutation_probability 1
+recombination_probability 0.8
+bit_turn_probability 0.008
+
+end varParameter
+
+start selCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 2
+
+end selCommonParameter
+
+start selParameter
+seed 11
+tournament 2
+end selParameter

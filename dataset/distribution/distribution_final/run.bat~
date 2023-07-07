@@ -1,0 +1,68 @@
+:: Author: Lothar Thiele, ETHZ, 2-2005
+::
+:: If called with run.bat, then all
+:: runs are executed. If called with
+:: run.bat compare , then only
+:: the statistical tests are done.
+::
+:: The following variables contain the
+:: the names of the selectors and variators
+:: to be used. For each combination, there
+:: will be runs of selector-variator pairs. 
+:: Note that all directories and
+:: parameter files need to be named
+:: consistently. If a variator is used with 
+:: different parameter files, it should be 
+:: copied into a new directory with a
+:: different name
+SET selectors=ibea nsga2 spea2
+SET variators=dtlz2 knapsack zdt6
+
+:: The following variable contains the
+:: generation number for which there will
+:: be the statistics done. Note that
+:: the control file for the monitor must
+:: be such that this generation is
+:: actually computed ... .
+SET generation=200
+
+@if not "%1"=="" goto %1
+:: ============================================
+:: DONT CHANGE BELOW THIS LINE
+:: ============================================
+:: This line calls the batch file compute.bat to
+:: run the selector, variator and monitor.
+:: The resulting files are put into the directory
+:: ./runs. THIS DIRECTORY SHOULD BE EMPTY INITIALLY.
+:: OTHERWISE, THE STATISTICAL TEST WILL BE WRONG.
+@FOR %%s IN (%selectors%) DO (@FOR %%v IN (%variators%) DO @call compute run %%s %%v %generation%)
+
+:: This line calls the batch file compute.bat
+:: to compute the bounds for each test problem (variator).
+:compare
+@FOR %%v IN (%variators%) DO @call compute bounds %%s %%v %generation%
+
+:: This line calls the batch file compute.bat
+:: to determine the indicators for each combination
+:: of variator and selector.
+@FOR %%s IN (%selectors%) DO (@FOR %%v IN (%variators%) DO @call compute indicators %%s %%v %generation%)
+
+:: This line calls the batch file compute.bat
+:: to perform the statistical tests (variator).
+:tests
+@FOR %%v IN (%variators%) DO @call compute tests %%s %%v %generation%
+
+:: This line calls the batch file compute.bat
+:: to determine all eafs for each combination
+:: of variator and selector.
+:eaf
+@FOR %%s IN (%selectors%) DO (@FOR %%v IN (%variators%) DO @call compute eafs %%s %%v %generation%)
+
+:: This line calls the batch file compute.bat
+:: to perform the statistical tests based on eafs.
+@FOR %%s IN (%selectors%) DO (@FOR %%t IN (%selectors%) DO (@FOR %%v IN (%variators%) DO @call compute eaftests %%s %%t %%v %generation%))
+
+:: This line calls the batch file compute.bat
+:: to perform the nondominated ranking testing.
+:rank
+@FOR %%s IN (%selectors%) DO (@FOR %%t IN (%selectors%) DO (@FOR %%v IN (%variators%) DO @call compute ranktests %%s %%t %%v %generation%))

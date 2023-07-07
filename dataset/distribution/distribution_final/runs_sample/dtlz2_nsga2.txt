@@ -1,0 +1,50 @@
+start commandLine
+../dtlz2_linux/dtlz2_param.txt ../dtlz2_linux/PISA_ ../nsga2_linux/nsga2_param.txt ../nsga2_linux/PISA_ monitor_param.txt ../runs/dtlz2_nsga2 0.1
+end commandLine
+
+start monParameter
+seed 23
+numberOfRuns 31
+numberOfGenerations 200
+outputType offline
+outputSet 1
+debug 1
+
+end monParameter
+
+start varCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 3
+
+end varCommonParameter
+
+start varParameter
+problem DTLZ2
+seed 1039845533
+number_decision_variables 100
+maxgen 1000
+outputfile dtlz_output.txt
+individual_mutation_probability 1
+individual_recombination_probability 1
+variable_mutation_probability 0.01
+variable_swap_probability 0.5
+variable_recombination_probability 1
+eta_mutation 20
+eta_recombination 15
+
+end varParameter
+
+start selCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 3
+
+end selCommonParameter
+
+start selParameter
+seed 11
+tournament 2
+end selParameter

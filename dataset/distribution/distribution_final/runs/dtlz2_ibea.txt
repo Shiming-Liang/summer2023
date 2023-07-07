@@ -1,0 +1,53 @@
+start commandLine
+../dtlz2_linux/dtlz2_param.txt ../dtlz2_linux/PISA_ ../ibea_linux/ibea_param.txt ../ibea_linux/PISA_ monitor_param.txt ../runs/dtlz2_ibea 0.1
+end commandLine
+
+start monParameter
+seed 23
+numberOfRuns 30
+numberOfGenerations 200
+outputType offline
+outputSet 1
+debug 1
+
+end monParameter
+
+start varCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 3
+
+end varCommonParameter
+
+start varParameter
+problem DTLZ2
+seed 1198075101
+number_decision_variables 100
+maxgen 1000
+outputfile dtlz_output.txt
+individual_mutation_probability 1
+individual_recombination_probability 1
+variable_mutation_probability 0.01
+variable_swap_probability 0.5
+variable_recombination_probability 1
+eta_mutation 20
+eta_recombination 15
+
+end varParameter
+
+start selCommonParameter
+alpha 200
+mu 100
+lambda 100
+dim 3
+
+end selCommonParameter
+
+start selParameter
+seed 11
+tournament 2
+indicator 0
+kappa 0.05
+rho 1.1
+end selParameter

@@ -1,0 +1,246 @@
+========================================================================
+PISA  (www.tik.ee.ethz.ch/pisa/)
+========================================================================
+Computer Engineering (TIK)
+ETH Zurich	 
+========================================================================
+DTLZ - Suite of continuous test problems by Deb, Thiele, Laumanns, Zitzler
+
+Variator Implementation with PISALib
+ 
+Documentation
+  
+file: dtlz_documentation.txt
+author: Marco Laumanns, laumanns@tik.ee.ethz.ch
+last change: 04.10.04
+========================================================================
+
+The Problem
+===========
+
+This module contains various continuous multiobjective test
+problems:
+
+- The problems DTLZ1 to DTLZ7 described in [DTLZ2002a] and
+[DTLZ2004a] as well as the problem COMET described in the
+appendix of [DTLZ2004a]
+
+- The six two-objective problems proposed in [ZDT2000a],
+here named ZDT1 to ZDT6,
+
+- The two-objective problem SPHERE (multi-objective sphere
+model), KUR (Kursawe's function) and QV (test problem
+proposed by Quagliarella and Vicini), as described in
+[ZLT2001a].
+
+Note that the ZDT3 problem was slighlty modified compared to
+the original version: in order to conform to the PISA
+convention of non-negative objective values, the constant 1
+was added to the second function f_2 of ZDT3.
+
+InProceedings{DTLZ2002a,
+  author =       {K. Deb and L. Thiele and M. Laumanns
+                  and E. Zitzler}, 
+  title =        {Scalable Multi-Objective Optimization Test Problems},
+  booktitle =    {Congress on Evolutionary Computation (CEC)},
+  year =         2002,
+  pages     = {825--830},
+  publisher = {IEEE Press},
+}
+
+@InCollection{DTLZ2004a,
+  author =       {K. Deb and L. Thiele and M. Laumanns
+                  and E. Zitzler},
+  title =        {Scalable Test Problems for Evolutionary
+                  Multi-Objective Optimization},
+  booktitle =    {Evolutionary Computation Based Multi-Criteria
+                  Optimization: Theoretical Advances and
+                  Applications}, 
+  Publisher =    {Springer},
+  year =         2004,
+  editor =       {A. Abraham and others},
+  note =         {To appear}
+}
+
+@Article{ZDT2000a,
+  author = "E. Zitzler and K. Deb and L. Thiele",
+  title = "Comparison of Multiobjective Evolutionary
+           Algorithms: Empirical Results", 
+  journal = "Evolutionary Computation",
+  year = 2000,
+  volume =       8,
+  number =       2,
+  pages =        "173--195"
+}
+
+@TechReport{ZLT2001a,
+  author = 	 "E. Zitzler and M. Laumanns and L. Thiele",
+  title = 	 "{SPEA2}: Improving the {S}trength {P}areto
+                  {E}volutionary {A}lgorithm", 
+  institution =  "Computer Engineering and Networks Laboratory (TIK), Swiss
+		  Federal Institute of Technology (ETH) Zurich",
+  year = 	 2001,
+  number =	 103,
+  address =	 "Gloriastrasse 35, CH-8092 Zurich, Switzerland",
+  month =	 "May"
+}
+
+@Book{Deb2001a,
+  author={K. Deb},
+  title={Multi-objective optimization using evolutionary algorithms},
+  publisher={Wiley},
+  address =  "Chichester, UK",
+  year={2001} 
+}
+
+
+
+The Variation Operators
+=======================
+
+The individuals are represented as real vectors, normalized to the
+interval [0,1]. The variation operators are the SBX (simulated binary
+crossover) and the polynomial mutation operator (see [Deb2001a]). If
+the parameter <variable_recombination_probability> is set to 0 and
+<variable_swap_probability> set to 0.5, the recombination is
+equivalent to uniform crossover.
+
+
+
+The Parameters
+==============
+
+This module uses the following values for the common parameters:
+
+alpha   (size of the initial population)
+mu      (number of parent individuals)
+lambda  (number of offspring individuals, has to be equal to mu)
+dim     (number of objectives)
+
+'PISA_cfg' is a sample PISA_configuration file.
+
+DTLZ takes 12 local parameters which are given in a parameter file. 
+The name of this parameter file is passed to the dtlz program as
+command line argument. 
+
+problem (test problem name, e.g., DTLZ2 or SPHERE)
+
+seed (seed for random number generator)
+
+number_decision_variables (number of decision variables)
+
+maxgen (maximum number of iterations)
+
+outputfile (outputfile)
+
+individual_mutation_probability (probability that a certain individual
+undergoes mutation)
+
+individual_recombination_probability (probability that a certain pair
+of individuals undergoes recombination) 
+
+variable_mutation_probability (probability that a certain variable in
+a given individual is mutated)
+
+variable_swap_probability (probability that a certain pair of
+variables is swapped during recombination)
+
+variable_recombination_probability (probability that the SBX
+recombination operator is used for a given pair of variables; this
+decision is independent from variable_swap_probability)
+
+eta_mutation 15 (distribution index for mutation operator)
+
+eta_recombination 5 (distribution index for recombination operator)
+
+'dtlz_param.txt' is a PISA_parameter file.
+
+
+Source Files
+============
+
+The source code for DTLZ is divided into six files.
+
+Four generic files are taken from PISALib:
+
+'variator.{h,c}' is a taken from PISALib. It contains the main
+function and all functions implementing the control flow.
+
+'variator_internal.{h,c}' is taken from PISALib. It contains functions
+that are called by the functions in the 'variator' part and do the
+work in the background (file access etc.). 
+  
+'variator_user.{h,c}' defines and implements the DTLZ specific
+operations.
+
+Additionally, a Makefile, a 'PISA_cfg' file with common parameters and
+a 'dtlz_param.txt' file with local parameters used by DTLZ are
+contained in the tar file.
+
+For compiling on Windows and Unix (any OS having <unistd.h>) uncomment
+the according '#define' in the 'variator.h' file.
+
+
+Usage
+=====
+
+Call DTLZ with the following arguments:
+
+dtlz paramfile filenamebase poll
+
+paramfile: specifies the name of the file containing the local
+parameters (e.g. dtlz_param.txt)
+
+filenamebase: specifies the name (and optionally the directory) of the
+communication files. The filenames of the communication files and the
+configuration file are built by appending 'sta', 'var', 'sel','ini',
+'arc' and 'cfg' to the filenamebase. This gives the following names for
+the '../PISA_' filenamebase:
+
+../PISA_cfg - configuration file
+../PISA_ini - initial population
+../PISA_sel - individuals selected for variation
+../PISA_var - variated individuals (offspring)
+../PISA_arc - individuals in the archive
+
+Caution: the filenamebase must be consistent with the name of
+the configuration file and the filenamebase specified for the selector
+module.
+
+poll: gives the value for the polling time in seconds (e.g. 0.5).
+
+
+Output
+======
+
+DTLZ writes the content of the archive in the last generation to a
+specified output file. One individual is written per line using the
+following format:
+
+ID (objective 1) (objective 2) ... (objective dim) (decision variable
+1) (decision variable 2) ... (decision variable <number_decision_variables>) 
+
+
+
+Limitations
+===========
+
+This DTLZ module can only handle mu == lambda. If an odd number is
+chosen for mu and lambda, the last individual in the mating pool can
+only undergo mutation, as it has no recombination partner.
+
+
+
+Stopping and Resetting
+======================
+
+The behaviour in state 7 and 11 is not determined by the interface but
+by each variator module specifically. DTLZ behaves as follows:
+
+state 7 (= selector terminated): set state to 4 (terminate as well).
+state 11 (= selector resetted): set state to 0 (start again).
+
+The user can change the state variable in the sta file using a text
+editor, e.g., for stopping both processes or for resetting. DTLZ 
+assumes that the variator is resetted before the selector, i.e., state
+8 is present before state 10.

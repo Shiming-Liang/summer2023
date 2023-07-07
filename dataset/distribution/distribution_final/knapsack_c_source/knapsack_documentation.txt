@@ -1,0 +1,191 @@
+========================================================================
+PISA  (www.tik.ee.ethz.ch/pisa/)
+========================================================================
+Computer Engineering (TIK)
+ETH Zurich	 
+========================================================================
+KNAPSACK - multiobjective 0/1 knapsack problem
+
+Variator Implementation with PISALib
+ 
+Documentation
+  
+file: knapsack_documentation.txt
+author: Marco Laumanns, laumanns@tik.ee.ethz.ch
+
+revision by: Stefan Bleuler, bleuler@tik.ee.ethz.ch
+last change: $date$
+========================================================================
+
+The Problem
+===========
+
+Generally, a 0/1 knapsack problem consists of a set of items,
+weight and profit associated with each item, and an upper bound for the
+capacity of the knapsack. The task is to find a subset of items which
+maximizes the total of the profits in the subset, yet all selected items
+fit into the knapsack, i.e., the total weight does not exceed the given
+capacity.
+
+This single-objective problem can be extended directly to the
+multiobjective case by associating m different profit and m different
+weight values per item and m capacity bounds. 
+The m-th objective function value of a solution (set of items) is then
+defined as the sum over their m-th profit values. A solution is
+feasible, if each of the m summation over their m-th weight values
+does not exceed the m-th capacity bound.
+
+@Article{ZT1999,
+  author =       "E. Zitzler and L. Thiele",
+  title =        "Multiobjective Evolutionary Algorithms: A
+                  Comparative Case Study and the Strength Pareto Approach",
+  journal =      "IEEE Transactions on Evolutionary Computation",
+  year =         1999,
+  volume =       3,
+  number =       4,
+  pages =        "257--271"
+}
+
+
+The Variation
+=============
+
+KNAPSACK uses a bit vector representation for the individuals. 
+There is a choice between different mutation and recombination
+operators (see 'The Parameters' section). 
+
+
+The Parameters
+==============
+
+KNAPSACK uses the following values for the common parameters.
+These parameters are specified in 'PISA_cfg'.
+
+alpha   (size of the initial population)
+mu      (number of parent individuals)
+lambda  (number of offspring individuals, has to be equal to mu)
+dim     (number of objectives)
+
+
+
+KNAPSACK takes 9 local parameters which are given in a parameter file. 
+The name of this parameter file is passed to KNAPSACK as command line
+argument. (See 'knapsack_param.txt' for an example.)
+
+seed                      (seed for the random number generator)
+
+length                    (length of the binary string)
+
+maxgen                    (maximum number of generations)
+
+outputfile                (name of file for output of the last
+                           population in archive)
+
+mutation_type             (choose '0' for no mutation, '1' for one-bit
+                           mutation, and '2' for independet-bit mutation)
+
+recombintaion_type        (choose '0' for no recombination, '1' for one-point
+                           crossover, and '2' for uniform crossover)
+
+mutation_probability      (probability that a given individual is mutated)
+
+recombination_probability (probability that a given pair of
+			   individuals undergoes crossover)
+
+bit_turn_probability      (probability that a bit is flipped for each bit,
+                           only used with mutation type 2)
+
+
+Source Files
+============
+
+The source code for KNAPSACK is divided into six files.
+
+Four generic files are taken from PISALib:
+
+'variator.{h,c}' is a taken from PISALib. It contains the main
+function and all functions implementing the control flow.
+
+'variator_internal.{h,c}' is taken from PISALib. It contains functions
+that are called by the functions in the 'variator' part and do the
+work in the background (file access etc.). 
+  
+'variator_user.{h,c}' defines and implements the KNAPSACK specific
+operations.
+
+Additionally a Makefile, a PISA_cfg file with common
+parameters and a knapsack_param.txt file with local parameters are
+contained in the tar file.
+
+For compiling on Windows change the according '#define' in the
+'variator_user.h' file.
+
+
+Usage
+=====
+
+Call KNAPSACK with the following arguments:
+
+knapsack paramfile filenamebase poll
+
+paramfile: specifies the name of the file containing the local
+parameters (e.g. knapsack_param.txt)
+
+filenamebase: specifies the name (and optionally the directory) of the
+communication files. The filenames of the communication files and the
+configuration file are built by appending 'sta', 'var', 'sel','ini',
+'arc' and 'cfg' to the filenamebase. This gives the following names for
+the '../PISA_' filenamebase:
+
+../PISA_cfg - configuration file
+../PISA_ini - initial population
+../PISA_sel - individuals selected for variation
+../PISA_var - variated individuals (offspring)
+../PISA_arc - individuals in the archive
+
+Caution: the filenamebase must be consistent with the name of
+the configuration file and the filenamebase specified for the selector
+module.
+
+poll: gives the value for the polling time in seconds (e.g. 0.5). This
+      polling time must be larger than 0.01 seconds.
+
+
+Output
+======
+
+KNAPSACK writes the content of the archive in the last generation to a
+specified output file. One individual is written per line using the
+following format:
+
+ID (objective 1) (objective 2) ... (objective dim) bit-vector
+
+Note: Since PISA always assumes a minimization problem, the objective
+values are internally transformed (f_i -> P_i - f_i, where P_i is the
+sum over all i-th profit values) for the data exchange with the
+selector module. For the output, these internal values are
+re-transformed to their original meaning. 
+
+
+Limitations
+===========
+
+This KNAPSACK module can only handle mu == lambda. If an odd number is
+chosen for mu and lambda, the last individual in the mating pool can
+only undergo mutation, as it has no recombination partner.
+
+
+
+Stopping and Resetting
+======================
+
+The behaviour in state 7 and 11 is not determined by the interface but
+by each variator module specifically. KNAPSACK behaves as follows:
+
+state 7 (= selector terminated): set state to 4 (terminate as well).
+state 11 (= selector resetted): set state to 0 (start again).
+
+The user can change the state variable in the sta file using a text
+editor, e.g., for stopping both processes or for resetting. KNAPSACK 
+assumes that the variator is resetted before the selector, i.e., state
+8 is present before state 10.
