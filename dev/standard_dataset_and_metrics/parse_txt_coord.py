@@ -33,6 +33,7 @@ def formulate_OP(df):
     OP_formulation.graph['maximum_path_length'] = df.loc['U', 2]
     OP_formulation.graph['start'] = int(df.loc['B', 1])
     OP_formulation.graph['end'] = int(df.loc['E', 1])
+    # OP_formulation.graph['end'] = int(df.loc['B', 1])
     # enter node attr
     for i in OP_formulation.nodes:
         OP_formulation.nodes[i]['objectives'] = data[i, 2:]
@@ -48,6 +49,8 @@ def formulate_OP(df):
                          OP_formulation.nodes[j]['long']]
                 distance_ij = dist(pos_i, pos_j)
                 OP_formulation.edges[i, j]['distance'] = distance_ij
+            elif j == i:
+                OP_formulation.add_edge(j, i, distance=0.0)
 
     return OP_formulation
 
@@ -101,8 +104,14 @@ def get_objectives(bee, OP_formulation):
     """
     # calculate objectives
     objectives = np.zeros_like(OP_formulation.nodes[0]['objectives'])
-    for i in bee['solution']:
-        objectives += OP_formulation.nodes[i]['objectives']
+    if bee['solution'][0] != bee['solution'][-1]:
+        # situation where start != end
+        for i in bee['solution']:
+            objectives += OP_formulation.nodes[i]['objectives']
+    else:
+        # situation where start == end
+        for i in bee['solution'][:-1]:
+            objectives += OP_formulation.nodes[i]['objectives']
     bee['objectives'] = objectives
     return bee
 
@@ -135,9 +144,8 @@ def get_best_movements(OP_formulation):
         for j in OP_formulation.neighbors(i):
             objective_sum = np.sum(OP_formulation.nodes[j]['objectives'])
             distance = OP_formulation.edges[(i, j)]['distance']
-            if distance == 0:
-                print(i, j)
-            ratio_ij[j] = objective_sum/distance
+            if i != j:
+                ratio_ij[j] = objective_sum/distance
         # find the index corresponding to the 10 largest ratio
         best_next = np.argpartition(ratio_ij, -num_best_next)[-num_best_next:]
         OP_formulation.nodes[i]['best_next'] = best_next
@@ -495,9 +503,9 @@ def check_dominance(bee, another_bee):
     """
     dominance_indicator = None
     # set dominant_bee
-    if (bee['objectives'] > another_bee['objectives']).all():
+    if (bee['objectives'] >= another_bee['objectives']).all():
         dominance_indicator = 1
-    elif (bee['objectives'] < another_bee['objectives']).all():
+    elif (bee['objectives'] <= another_bee['objectives']).all():
         dominance_indicator = -1
     else:
         dominance_indicator = 0
@@ -757,12 +765,12 @@ rng = np.random.default_rng(0)
 
 # find the paths of all the txt files
 txt_paths = list(
-    Path("../../dataset/moop/2 objectives").rglob("2_*.[tT][xX][tT]"))
+    Path("../../dataset/moop/2 objectives/coord").rglob("*.[tT][xX][tT]"))
 
 # %% problem formulation
 num_bee = 10
 maximum_trial_num = 10
-maximum_itr = 50
+maximum_itr = 20
 for txt_path in txt_paths:
     print(txt_path.stem)
     df = pd.read_csv(txt_path, comment='/',
@@ -776,5 +784,5 @@ for txt_path in txt_paths:
 
 """
 comment:
-    to do: parse standard dataset from txt files
+    parse standard dataset from txt files
 """
