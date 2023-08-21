@@ -1,0 +1,14 @@
+These are the results of the new method applied on the problem sets with
+Euclidean coordinations.
+
+Notable things about this version:
+- Added early stop for the shorten operator if there is no need for shortening
+- More efficient sorting of the pq_list in the add operator
+- The add operator now returns when all the priority queues are infeasible 
+    instead of when the one with lowest negative bcr is infeasible
+- The program now output the results with the correct tag instead of MOABC
+- The crossover operator now produce the new weight with the average weights 
+    of the parents
+- The Pareto update now first check for repetition and then do the Pareto 
+    comparision, because checking existence of a key in a dict is O(1), 
+    and the for loop will take forever to check repetition

@@ -1,0 +1,7 @@
+These are the results of the new method applied on the problem sets with
+Euclidean coordinations.
+
+Notable things about this version:
+- fixed problems on closed tours: in tour, it needs additional condition to 
+    tell if a vertices is visited. Because the permutation[start] = end and 
+    start == end. 

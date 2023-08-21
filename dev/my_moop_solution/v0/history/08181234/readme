@@ -1,0 +1,5 @@
+These are the results of the new method applied on the problem sets with
+Euclidean coordinations.
+
+Notable things about this version:
+- The iteration through the non-visited vertices is now done via do while loop

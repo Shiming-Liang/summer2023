@@ -1,0 +1,6 @@
+These are the results of the new method applied on the problem sets with
+Euclidean coordinations.
+
+Notable things about this version:
+- The add operator is improved by reusing the benefits and curr_vertex
+- The crossover operator now will return early if the 2 parents are the same
