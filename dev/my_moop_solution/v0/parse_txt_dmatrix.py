@@ -371,6 +371,33 @@ def shorten(OP_formulation, old_solution):
     return new_solution
 
 
+# ---- modified_bcr(benefit, cost): modified_bcr
+def modified_benefit_cost_ratio(benefit, cost):
+    """
+    Compute the modified benefit cost ratio given benefit and cost.
+    modified_bcr = benefit/cost when cost >=1
+        = benefit*(2-cost) when cost < 1
+
+    Parameters
+    ----------
+    benefit : float
+        input benefit.
+    cost : float
+        input cost.
+
+    Returns
+    -------
+    modified_bcr : float
+        output modified benefit cost ratio.
+
+    """
+    if cost > 1:
+        modified_bcr = benefit/cost
+    else:
+        modified_bcr = benefit*(2-cost)
+    return modified_bcr
+
+
 # ---- drop(OP_formulation, old_solution, dropped_proportion): new_solution
 def drop(OP_formulation, old_solution, dropped_proportion, weight):
     """
@@ -423,7 +450,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
         cost += OP_formulation.edges[curr_vertex, next_vertex]['distance']
         cost -= OP_formulation.edges[prev_vertex, next_vertex]['distance']
         # compute the bcr
-        bcr = benefit/cost
+        bcr = modified_benefit_cost_ratio(benefit, cost)
         # add the drop tuple to the heapdict
         pq.set_item(drop_tuple, bcr)
         # move to the next vertex
@@ -457,7 +484,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
             cost += OP_formulation.edges[prev_vertex, next_vertex]['distance']
             cost -= OP_formulation.edges[prev_prev_vertex,
                                          next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
             new_tuple = (prev_vertex, next_vertex, next_next_vertex)
             benefit = weight@OP_formulation.nodes[next_vertex]['objectives']
@@ -467,7 +494,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
                                          next_next_vertex]['distance']
             cost -= OP_formulation.edges[prev_vertex,
                                          next_next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
         elif prev_vertex == OP_formulation.graph['start']:
             # remove the affected tuples
@@ -483,7 +510,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
                                          next_next_vertex]['distance']
             cost -= OP_formulation.edges[prev_vertex,
                                          next_next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
         else:
             # remove the affected tuples
@@ -499,7 +526,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
             cost += OP_formulation.edges[prev_vertex, next_vertex]['distance']
             cost -= OP_formulation.edges[prev_prev_vertex,
                                          next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
     return new_solution
 
@@ -552,7 +579,7 @@ def add(OP_formulation, old_solution, weight):
                                              next_vertex]['distance']
                 # compute the negative bcr
                 # NOTICE! It is negative because the pq is a min heap
-                negative_bcr = -benefit/cost
+                negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
                 # add the add tuple to the heapdict
                 pq.set_item(add_tuple, negative_bcr)
                 # move on to the next vertex
@@ -612,7 +639,7 @@ def add(OP_formulation, old_solution, weight):
                                          added_vertex]['distance']
             # compute the negative bcr
             # NOTICE! It is negative because the pq is a min heap
-            negative_bcr = -benefit/cost
+            negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
             # add the add tuple to the heapdict
             pq_list[pq_idx][0].set_item(new_tuple, negative_bcr)
             # set another new tuples
@@ -627,7 +654,7 @@ def add(OP_formulation, old_solution, weight):
                                          next_vertex]['distance']
             # compute the negative bcr
             # NOTICE! It is negative because the pq is a min heap
-            negative_bcr = -benefit/cost
+            negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
             # add the add tuple to the heapdict
             pq_list[pq_idx][0].set_item(new_tuple, negative_bcr)
     return new_solution
@@ -883,7 +910,7 @@ np.seterr(divide='ignore')
 
 # find the paths of all the txt files
 txt_paths = list(
-    Path("../../../dataset/moop/2 objectives/dmatrix").rglob("2_p97_t*.[tT][xX][tT]"))
+    Path("../../../dataset/moop/2 objectives/dmatrix").rglob("2_p559_t*.[tT][xX][tT]"))
 
 # set params
 maximum_trial_number = 10
