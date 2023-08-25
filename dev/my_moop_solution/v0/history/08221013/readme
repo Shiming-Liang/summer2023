@@ -1,0 +1,10 @@
+These are the results of the new method applied on the problem sets with
+distance matrices.
+
+Notable things about this version:
+- fixed problems on closed tours: in tour, it needs additional condition to 
+    tell if a vertices is visited. Because the permutation[start] = end and 
+    start == end. 
+- change the bcr compuatation to deal with negative cost(before: benefit/cost, 
+    now: benefit/cost when cost > 1, benefit*(2-cost) otherwise)
+- tested on the dmatrix problem sets, the result is not very good

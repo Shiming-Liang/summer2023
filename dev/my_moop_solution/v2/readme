@@ -1,0 +1,5 @@
+These are the results of the new method applied on the problem sets with
+distance matrices.
+
+Notable things about this version:
+- Multiple extreme point search with backup pool

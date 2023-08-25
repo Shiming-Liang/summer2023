@@ -801,7 +801,7 @@ rng = np.random.default_rng(0)
 
 # find the paths of all the txt files
 txt_paths = list(
-    Path("../../../dataset/moop/2 objectives/dmatrix").rglob("*_t*.[tT][xX][tT]"))
+    Path("../../../dataset/moop/2 objectives/dmatrix").rglob("2_p97_t*.[tT][xX][tT]"))
 
 # %% problem formulation
 num_bee = 10

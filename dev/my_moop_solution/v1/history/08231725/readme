@@ -1,0 +1,10 @@
+These are the results of the new method applied on the problem sets with
+distance matrices.
+
+Notable things about this version:
+- Added a backup pool in case the Pareto set approximation is too small. When 
+    ever the backup pool is used, it is clipped to the size (minimum_population 
+    - len(pareto_set_approximation)) according to the fitness values. The 
+    fitness values are calculated according to the IBEA paper. The differences
+    are: we take the sum of the indicator values instead of the sum of 
+    exponential, and we then take the exponential of the sums.

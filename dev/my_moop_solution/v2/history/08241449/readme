@@ -1,0 +1,10 @@
+These are the results of the new method applied on the problem sets with
+distance matrices.
+
+Notable things about this version:
+- For the extreme point search, we initialize the solution using a random 
+    subset with half the number of all vertices in the problem
+- Modified the drop operator such that it terminate when the route length hit
+    half of the route length constraint
+- We now run extreme point search multiple times
+- The result is still not good.
