@@ -7,7 +7,6 @@ Created on Wed Jun 21 11:25:37 2023
 """
 
 # %% import
-from math import dist
 from pygmo import hypervolume
 from heapq import heappush, heappop
 from sklearn.preprocessing import MinMaxScaler
@@ -43,14 +42,14 @@ class PriorityQueue:
 
     def get_item(self):
         while self.hq:
-            _, _, key = heappop(self.hq)
+            priority, count, key = heappop(self.hq)
             if key != '<removed-item>':
                 del self.d[key]
                 return key
 
     def peek_smallest(self):
         while True:
-            priority, _, key = self.hq[0]
+            priority, count, key = self.hq[0]
             if key == '<removed-item>':
                 heappop(self.hq)
             else:
@@ -60,68 +59,58 @@ class PriorityQueue:
 # %% local functions
 # ---- formulate the OP problem
 def formulate_OP(df):
+    # remove all na columns
+    df = df.dropna(axis='columns', how='all')
+    # get distance matrix
+    distance_matrix = df.loc['D'].to_numpy()
+    # drop rows with index 'D'
+    df = df.drop(labels='D')
+    df = df.dropna(axis='columns', how='all')
+
     # seperate data from configs
     data = df.dropna(axis='rows', how='any').to_numpy()
     # generate a complete graph
     n = int(df.loc['N', 1])
-    OP_formulation = nx.complete_graph(n)
+    OP_formulation = nx.DiGraph()
+    OP_formulation.add_nodes_from(range(n))
     # enter graph attr
     OP_formulation.graph['n'] = n
     OP_formulation.graph['maximum_path_length'] = df.loc['U', 2]
     OP_formulation.graph['start'] = int(df.loc['B', 1])
     OP_formulation.graph['end'] = int(df.loc['E', 1])
-    # OP_formulation.graph['end'] = int(df.loc['B', 1])
     # enter node attr
     for i in OP_formulation.nodes:
         OP_formulation.nodes[i]['objectives'] = data[i, 2:]
-        OP_formulation.nodes[i]['lat'] = data[i, 0]
-        OP_formulation.nodes[i]['long'] = data[i, 1]
     # enter edge attr
     for i in OP_formulation.nodes:
         for j in OP_formulation.nodes:
-            if j > i:
-                pos_i = [OP_formulation.nodes[i]['lat'],
-                         OP_formulation.nodes[i]['long']]
-                pos_j = [OP_formulation.nodes[j]['lat'],
-                         OP_formulation.nodes[j]['long']]
-                distance_ij = dist(pos_i, pos_j)
-                OP_formulation.edges[i, j]['distance'] = distance_ij
-            elif j == i:
-                OP_formulation.add_edge(j, i, distance=0.0)
+            OP_formulation.add_edge(i, j, distance=distance_matrix[i, j])
 
     return OP_formulation
 
 
-# ---- compute_fitness(objectives_of_all_solutions):
-def compute_fitness(objectives_of_all_solutions):
+# ---- select(pareto_set_approximation)
+def logsumexp(x):
     """
-    Compute the fitness values of each solution according to IBEA.
-    The method here is a bit different fron IBEA. Here we simply sum up the
-    indicator values without taking the exponential.
+    Standard log sum exp trick to avoid over/underflow.
+    The resulting normalized vector is given by np.exp(x - logsumexp(x)).
 
     Parameters
     ----------
-    objectives_of_all_solutions : nd array
-        n*k array containing the objectives of n solutions.
+    x : ndarray
+        The vector to take exponential.
 
     Returns
     -------
-    fitness : nd array
-        n array containing the fitness of n solutions.
+    float
+        The logsumexp term to be subtracted from x.
 
     """
-    # construct a empty array for fitness
-    fitness = np.empty(len(objectives_of_all_solutions))
-    # iterate through the objectives_of_all_solutions
-    for solution_idx, objectives in enumerate(objectives_of_all_solutions):
-        # compute sum(max(x2-x1)) and plug it in the fitness
-        fitness[solution_idx] = (
-            objectives-objectives_of_all_solutions).max(axis=1).sum()
-    return fitness
+    c = x.max()
+    return c + np.log(np.sum(np.exp(x - c)))
 
 
-# ---- select(pareto_set_approximation)
-def select(population, maximum_population_size, tournament_size):
+def select(pareto_set_approximation):
     """
     Select 2 parents using roulette wheel.
     The probability for each candidate is proportional to the exponential of 
@@ -129,49 +118,48 @@ def select(population, maximum_population_size, tournament_size):
 
     Parameters
     ----------
-    population : dict
-        A dict of dominated solutions, with the key-value pair of permutation-
-        solution.
+    pareto_set_approximation : dict
+        A dict of non-dominated solutions, with the key-value pair 
+        of permutation-solution.
 
     Returns
     -------
     parents : list
         2 parents chosen by roulette wheel.
-    population : dict
-        A dict of dominated solutions, with the key-value pair of permutation-
-        solution.
 
     """
-    # get the objectives
+    # write the objectives as a ndarray
     objectives_of_all_solutions = []
-    for solution in population.values():
+    for solution in pareto_set_approximation.values():
         objectives_of_all_solutions.append(solution['objectives'])
     objectives_of_all_solutions = np.array(objectives_of_all_solutions)
     # normalize the objectives
     scaler = MinMaxScaler()
     objectives_of_all_solutions = scaler.fit_transform(
         objectives_of_all_solutions)
-    # compute the sum of binary epsilon indicators
-    fitness = compute_fitness(objectives_of_all_solutions)
-    # mating selection: find the parents by tournament selection
-    population_key_list = list(population)
-    parents = []
-    for _ in range(2):
-        tournament_candidate_indices = rng.choice(
-            len(fitness), tournament_size)
-        tournament_candidates_fitness = fitness[tournament_candidate_indices]
-        tournament_winner_index = tournament_candidate_indices[tournament_candidates_fitness.argmax(
-        )]
-        parents.append(
-            population[population_key_list[tournament_winner_index]])
-    # environmental selection: drop the worst solutions
-    if len(population) > maximum_population_size:
-        keep_indices = np.argpartition(
-            fitness, -maximum_population_size)[-maximum_population_size:]
-        population = {
-            population_key_list[keep_idx]: population[population_key_list[keep_idx]] for keep_idx in keep_indices}
-
-    return parents, population
+    # deal with situation with all 0
+    if not np.any(objectives_of_all_solutions):
+        objectives_of_all_solutions = np.ones_like(objectives_of_all_solutions)
+    # get the unique objectives and the counts
+    unique, unique_inverse, unique_counts = np.unique(
+        objectives_of_all_solutions, return_inverse=True, return_counts=True, axis=0)
+    # calculate the hypervolume contribution
+    # NOTICE! the hypervolume api assumes minimization, hence take the minus
+    hv_unique = hypervolume(-unique)
+    ref_point = np.zeros_like(unique[0, :])+0.1
+    hv_contributions_unique = hv_unique.contributions(ref_point)
+    # reconstruct the hypervolume contribution with counts considered
+    hv_contributions_unique = hv_contributions_unique / unique_counts
+    hv = hv_contributions_unique[unique_inverse]
+    # take the exponential
+    # NOTICE! with the log sum exp trick, hv_exp sums up to 1
+    hv_exp = np.exp(hv-logsumexp(hv))
+    # get the parents
+    parents_indices = rng.choice(
+        len(pareto_set_approximation), 2, p=hv_exp)
+    parents = [list(pareto_set_approximation.values())[parents_index]
+               for parents_index in parents_indices]
+    return parents
 
 
 # ---- visited_vertices_from_solution(OP_formulation, solution)
@@ -242,15 +230,8 @@ def crossover(OP_formulation, parents):
     visited_vertices_mum = visited_vertices_from_solution(OP_formulation, mum)
     # get the intersected visited vertices
     visited_vertices_mum = set(visited_vertices_mum)
-    visited_vertices_dad = set(visited_vertices_dad)
-    visited_vertices_child = visited_vertices_mum | visited_vertices_dad
-    if OP_formulation.graph['start'] == OP_formulation.graph['end']:
-        visited_vertices_child.remove(OP_formulation.graph['start'])
-    else:
-        visited_vertices_child.remove(OP_formulation.graph['start'])
-        visited_vertices_child.remove(OP_formulation.graph['end'])
-    visited_vertices_child = [OP_formulation.graph['start'],
-                              *visited_vertices_child, OP_formulation.graph['end']]
+    visited_vertices_child = [
+        vertex for vertex in visited_vertices_dad if vertex in visited_vertices_mum]
     # get the child
     child = solution_from_visited_list(OP_formulation, visited_vertices_child)
     # get the weight
@@ -265,7 +246,6 @@ def pareto_update(old_pareto_set_approximation, solution):
     add the solution to the pareto_set_appr if it is Pareto efficient
     remove any solution dominated by the solution
     indicate Pareto efficiency
-    add the dominated solution(s) to the backup pool
 
     NOTICE! the old_pareto_set_appr must be Pareto efficient, or unexpected 
     behavior may occur!
@@ -288,8 +268,7 @@ def pareto_update(old_pareto_set_approximation, solution):
 
     """
     # check repetition
-    key = tuple(solution['permutation'])
-    if key in old_pareto_set_approximation:
+    if tuple(solution['permutation']) in old_pareto_set_approximation:
         # if another_solution dominate solution, set False updated
         updated = False
         # break
@@ -298,16 +277,15 @@ def pareto_update(old_pareto_set_approximation, solution):
     # prepare for dominance comparision
     updated = True
     new_pareto_set_approximation = deepcopy(old_pareto_set_approximation)
-    objectives = solution['objectives']
+    objectives = np.array(solution['objectives'])
 
     # iterate through the pareto_set_appr
-    for another_key, another_solution in old_pareto_set_approximation.items():
-        another_objectives = another_solution['objectives']
+    for key, another_solution in old_pareto_set_approximation.items():
+        another_objectives = np.array(another_solution['objectives'])
 
         if (objectives >= another_objectives).all() and (objectives > another_objectives).any():
-            # if solution dominate another_solution
-            # del another_solution from the Pareto set approximation
-            del new_pareto_set_approximation[another_key]
+            # if solution dominate another_solution, del another_solution
+            del new_pareto_set_approximation[key]
 
         if (objectives <= another_objectives).all() and (objectives < another_objectives).any():
             # if another_solution dominate solution, set False updated
@@ -391,6 +369,36 @@ def shorten(OP_formulation, old_solution):
     return new_solution
 
 
+# ---- modified_bcr(benefit, cost): modified_bcr
+def modified_benefit_cost_ratio(benefit, cost):
+    """
+    Compute the modified benefit cost ratio given benefit and cost.
+    modified_bcr = benefit/cost when cost >=1
+        = benefit*(2-cost) when cost < 1
+
+    Parameters
+    ----------
+    benefit : float
+        input benefit.
+    cost : float
+        input cost.
+
+    Returns
+    -------
+    modified_bcr : float
+        output modified benefit cost ratio.
+
+    """
+    # debug
+    if cost < 0:
+        print('bad cost!')
+    if cost > 1:
+        modified_bcr = benefit/cost
+    else:
+        modified_bcr = benefit*(2-cost)
+    return modified_bcr
+
+
 # ---- drop(OP_formulation, old_solution, dropped_proportion): new_solution
 def drop(OP_formulation, old_solution, dropped_proportion, weight):
     """
@@ -414,16 +422,17 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
         The solution after modification.
 
     """
-    # get the visited vertices
-    visited_vertices = visited_vertices_from_solution(
-        OP_formulation, old_solution)
-    # if the number of vertices to be dropped is 0, return the old solution
-    if len(visited_vertices) == 2:
-        return old_solution
-    # create a new solution
-    new_solution = deepcopy(old_solution)
     # unpack the solution
-    permutation = new_solution['permutation']
+    permutation = old_solution['permutation']
+    # get the total number of vertices
+    total_num_vertices = np.count_nonzero(
+        permutation-np.arange(len(permutation)))
+    # get the number of vertices to be dropped
+    drop_num_vertices = int((total_num_vertices-1)*dropped_proportion)
+    # if the number of vertices to be dropped is 0, return the old solution
+    if drop_num_vertices == 0:
+        return old_solution
+    new_solution = deepcopy(old_solution)
     # create the min heap with the drop_tuple (prev, curr, next) as key
     # initialize the heapdict
     pq = PriorityQueue()
@@ -442,7 +451,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
         cost += OP_formulation.edges[curr_vertex, next_vertex]['distance']
         cost -= OP_formulation.edges[prev_vertex, next_vertex]['distance']
         # compute the bcr
-        bcr = benefit/cost
+        bcr = modified_benefit_cost_ratio(benefit, cost)
         # add the drop tuple to the heapdict
         pq.set_item(drop_tuple, bcr)
         # move to the next vertex
@@ -450,16 +459,11 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
         curr_vertex = next_vertex
         next_vertex = permutation[curr_vertex]
     # for i in range(number of vertices to be dropped)
-    while pq.d:
+    for i in range(drop_num_vertices):
         # pop the smallest one
         drop_tuple = pq.get_item()
         # drop_vertex
-        temporary_solution = drop_vertex(
-            OP_formulation, new_solution, drop_tuple)
-        if temporary_solution['route_length'] < dropped_proportion*OP_formulation.graph['maximum_path_length']:
-            return new_solution
-        # overwrite the new solution with the temporary solution
-        new_solution = temporary_solution
+        new_solution = drop_vertex(OP_formulation, new_solution, drop_tuple)
         # get the new permutation
         permutation = new_solution['permutation']
         # adjust the priority queue
@@ -481,7 +485,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
             cost += OP_formulation.edges[prev_vertex, next_vertex]['distance']
             cost -= OP_formulation.edges[prev_prev_vertex,
                                          next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
             new_tuple = (prev_vertex, next_vertex, next_next_vertex)
             benefit = weight@OP_formulation.nodes[next_vertex]['objectives']
@@ -491,10 +495,8 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
                                          next_next_vertex]['distance']
             cost -= OP_formulation.edges[prev_vertex,
                                          next_next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
-        elif prev_vertex == OP_formulation.graph['start'] and next_vertex == OP_formulation.graph['end']:
-            pass
         elif prev_vertex == OP_formulation.graph['start']:
             # remove the affected tuples
             next_next_vertex = permutation[next_vertex]
@@ -509,7 +511,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
                                          next_next_vertex]['distance']
             cost -= OP_formulation.edges[prev_vertex,
                                          next_next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
         else:
             # remove the affected tuples
@@ -525,7 +527,7 @@ def drop(OP_formulation, old_solution, dropped_proportion, weight):
             cost += OP_formulation.edges[prev_vertex, next_vertex]['distance']
             cost -= OP_formulation.edges[prev_prev_vertex,
                                          next_vertex]['distance']
-            bcr = benefit/cost
+            bcr = modified_benefit_cost_ratio(benefit, cost)
             pq.set_item(new_tuple, bcr)
     return new_solution
 
@@ -557,7 +559,7 @@ def add(OP_formulation, old_solution, weight):
     # iterate through the permutation with enumerate
     for curr_vertex, next_vertex in enumerate(permutation):
         # if the vertex is unvisited
-        if curr_vertex == next_vertex:
+        if curr_vertex == next_vertex and curr_vertex != OP_formulation.graph['start']:
             # create the priority queue
             pq = PriorityQueue()
             # compute the benefit
@@ -578,7 +580,7 @@ def add(OP_formulation, old_solution, weight):
                                              next_vertex]['distance']
                 # compute the negative bcr
                 # NOTICE! It is negative because the pq is a min heap
-                negative_bcr = -benefit/cost
+                negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
                 # add the add tuple to the heapdict
                 pq.set_item(add_tuple, negative_bcr)
                 # move on to the next vertex
@@ -638,7 +640,7 @@ def add(OP_formulation, old_solution, weight):
                                          added_vertex]['distance']
             # compute the negative bcr
             # NOTICE! It is negative because the pq is a min heap
-            negative_bcr = -benefit/cost
+            negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
             # add the add tuple to the heapdict
             pq_list[pq_idx][0].set_item(new_tuple, negative_bcr)
             # set another new tuples
@@ -653,7 +655,7 @@ def add(OP_formulation, old_solution, weight):
                                          next_vertex]['distance']
             # compute the negative bcr
             # NOTICE! It is negative because the pq is a min heap
-            negative_bcr = -benefit/cost
+            negative_bcr = -modified_benefit_cost_ratio(benefit, cost)
             # add the add tuple to the heapdict
             pq_list[pq_idx][0].set_item(new_tuple, negative_bcr)
     return new_solution
@@ -790,7 +792,7 @@ def drop_vertex(OP_formulation, old_solution, drop_tuple):
 
 
 # ---- local_search(OP_formulation, weight): local_pareto_set_appr
-def local_search(OP_formulation, solution, weight, maximum_trial_number, pareto_set_approximation, population, dropped_proportion):
+def local_search(OP_formulation, solution, weight, maximum_trial_number, pareto_set_approximation, dropped_proportion):
     """
     Perform local search iteratively until trial_number hits maximum_trial_number
 
@@ -808,18 +810,12 @@ def local_search(OP_formulation, solution, weight, maximum_trial_number, pareto_
     pareto_set_approximation : dict
         A dict of non-dominated solutions, with the key-value pair 
         of permutation-solution.
-    population : dict
-        A dict of dominated solutions, with the key-value pair of permutation-
-        solution.
 
     Returns
     -------
     pareto_set_approximation : dict
         A dict of non-dominated solutions, with the key-value pair 
         of permutation-solution.
-    population : dict
-        A dict of dominated solutions, with the key-value pair of permutation-
-        solution.
 
     """
     trial_num = 0
@@ -831,17 +827,13 @@ def local_search(OP_formulation, solution, weight, maximum_trial_number, pareto_
         new_weighted_objectives = weight@solution['objectives']
         pareto_set_approximation, updated = pareto_update(
             pareto_set_approximation, solution)
-        # add the new solution to the population
-        solution_key = tuple(solution['permutation'])
-        if solution_key not in population:
-            population[solution_key] = solution
 
         if updated == True:
             trial_num = 0
         elif new_weighted_objectives <= old_weighted_objectives:
             trial_num += 1
 
-    return pareto_set_approximation, population
+    return pareto_set_approximation
 
 
 # ---- default_solution(OP_formulation)
@@ -864,28 +856,19 @@ def default_solution(OP_formulation, weight):
         A solution generated.
 
     """
-    # get the vertices except for start and end
-    midway_vertices = list(OP_formulation.nodes())
-    if OP_formulation.graph['start'] == OP_formulation.graph['end']:
-        midway_vertices.remove(OP_formulation.graph['start'])
-    else:
-        midway_vertices.remove(OP_formulation.graph['start'])
-        midway_vertices.remove(OP_formulation.graph['end'])
-    # get a random half sample of the vertices
-    half_midway_vertices = rng.choice(
-        midway_vertices, int(len(midway_vertices)/2), replace=False)
-    # create the solution
-    visited_vertices = [OP_formulation.graph['start'], *
-                        half_midway_vertices, OP_formulation.graph['end']]
+    # create a empty solution
+    visited_vertices = [OP_formulation.graph['start'],
+                        OP_formulation.graph['end']]
     solution = solution_from_visited_list(OP_formulation, visited_vertices)
+    # apply the add operator to the empty solution
+    solution = add(OP_formulation, solution, weight)
     return solution
 
 
 # ---- IBEA4MOOP
-def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_trial_number, dropped_proportion, maximum_population_size, tournament_size):
+def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_trial_number, dropped_proportion):
     # Initialize the Pareto front approximation as a empty dict
     pareto_set_approximation = dict()
-    population = dict()
 
     # get basic info from the problem
     K = len(OP_formulation.nodes[0]['objectives'])
@@ -895,29 +878,26 @@ def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_trial_number, dropped_p
         # local search with the weight e_k
         weight = np.zeros(K)
         weight[k] = 1
-        for itr in range(maximum_iteration):
-            # create child with add operator
-            solution = default_solution(OP_formulation, weight)
-            pareto_set_approximation, population = local_search(
-                OP_formulation, solution, weight, maximum_trial_number, pareto_set_approximation, population, dropped_proportion)
+        # create child with add operator
+        solution = default_solution(OP_formulation, weight)
+        pareto_set_approximation = local_search(
+            OP_formulation, solution, weight, maximum_trial_number, pareto_set_approximation, dropped_proportion)
 
     # while terminal condition not met
-    for itr in range(maximum_iteration**K):
+    for itr in range(maximum_iteration):
         # select
-        parents, population = select(
-            population, maximum_population_size, tournament_size)
+        parents = select(pareto_set_approximation)
         # crossover
         child, weight = crossover(OP_formulation, parents)
         # local search with the weight of the child solution
-        pareto_set_approximation, population = local_search(
-            OP_formulation, child, weight, maximum_trial_number, pareto_set_approximation, population, dropped_proportion)
+        pareto_set_approximation = local_search(
+            OP_formulation, child, weight, maximum_trial_number, pareto_set_approximation, dropped_proportion)
 
     # return result
     pareto_front_approximation = []
     for solution in pareto_set_approximation.values():
         pareto_front_approximation.append(solution['objectives'])
-    pareto_set_approximation = [(visited_vertices_from_solution(
-        OP_formulation, solution), solution['route_length']) for solution in pareto_set_approximation.values()]
+    pareto_set_approximation = list(pareto_set_approximation)
 
     return pareto_front_approximation, pareto_set_approximation
 
@@ -931,15 +911,13 @@ np.seterr(divide='ignore')
 
 # find the paths of all the txt files
 txt_paths = list(
-    Path("../../../dataset/moop/2 objectives/coord").rglob("2_p21_t*.[tT][xX][tT]"))
+    Path("../../../dataset/moop/2 objectives/dmatrix").rglob("2_p97_t*.[tT][xX][tT]"))
 
 # set params
 maximum_trial_number = 10
-maximum_iteration = 5
+maximum_iteration = 10
 runs_num = 10
-dropped_proportion = 0.5
-maximum_population_size = 50
-tournament_size = 2
+dropped_proportion = 0.2
 
 # %% problem formulation
 for txt_path in txt_paths:
@@ -954,10 +932,10 @@ for txt_path in txt_paths:
     open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
     for run in range(runs_num):
         df = pd.read_csv(txt_path, comment='/',
-                         names=list(range(5)), on_bad_lines='skip', index_col=0)
+                         names=list(range(2144)), on_bad_lines='skip', index_col=0)
         OP_formulation = formulate_OP(df)
         pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
-            OP_formulation, maximum_iteration, maximum_trial_number, dropped_proportion, maximum_population_size, tournament_size)
+            OP_formulation, maximum_iteration, maximum_trial_number, dropped_proportion)
         # write files
         pareto_front_approximation = pd.DataFrame(pareto_front_approximation)
         pareto_set_approximation = pd.DataFrame(pareto_set_approximation)
