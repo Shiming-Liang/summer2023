@@ -8,14 +8,12 @@ Created on Wed Jun 21 11:25:37 2023
 
 # %% import
 from math import dist
-from pygmo import hypervolume
 from heapq import heappush, heappop
 from sklearn.preprocessing import MinMaxScaler
 from copy import deepcopy
 import elkai
 import itertools
 from pathlib import Path
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -498,10 +496,10 @@ def non_visited_vertices_from_solution(OP_formulation, solution):
     return non_visited_vertices
 
 
-# ---- add(OP_formulation, old_solution, weight): new_solution
-def add(OP_formulation, old_solution):
+# ---- add
+def add(OP_formulation, old_solution, num_to_add):
     """
-    Randomly add a vertex to the solution.
+    Randomly add num_to_add bertices to the solution.
 
     Parameters
     ----------
@@ -509,6 +507,8 @@ def add(OP_formulation, old_solution):
         A networkx graph describing the OP problem, including vertices, scores, 
     old_solution : dict
         The solution to be modified.
+    num_to_add : int
+        The number of vertices to be added at each mutation.
 
     Returns
     -------
@@ -519,16 +519,20 @@ def add(OP_formulation, old_solution):
     # compute the non_visited_vertices
     non_visited_vertices = non_visited_vertices_from_solution(
         OP_formulation, old_solution)
-    if non_visited_vertices:
+    # compute the number of vertices to add
+    actual_num_to_add = min(len(non_visited_vertices), num_to_add)
+    # copy the old solution into a new one
+    new_solution = deepcopy(old_solution)
+    if actual_num_to_add > 0:
         # randomly pick a vertex
-        curr_vertex = rng.choice(non_visited_vertices)
+        curr_vertices = rng.choice(
+            non_visited_vertices, actual_num_to_add, replace=False)
         # add the vertex after the start vertex
         prev_vertex = OP_formulation.graph['start']
-        next_vertex = old_solution['permutation'][prev_vertex]
-        add_tuple = (prev_vertex, curr_vertex, next_vertex)
-        new_solution = add_vertex(OP_formulation, old_solution, add_tuple)
-    else:
-        new_solution = deepcopy(old_solution)
+        for curr_vertex in curr_vertices:
+            next_vertex = new_solution['permutation'][prev_vertex]
+            add_tuple = (prev_vertex, curr_vertex, next_vertex)
+            new_solution = add_vertex(OP_formulation, new_solution, add_tuple)
     return new_solution
 
 
@@ -720,7 +724,7 @@ def initialize(OP_formulation, population, maximum_population_size):
 
 
 # ---- mutate(OP_formulation, parents, population, pareto_set_approximation)
-def mutate(OP_formulation, parents, population, pareto_set_approximation):
+def mutate(OP_formulation, parents, population, pareto_set_approximation, num_to_add):
     """
     Evolve the parents, add the child to the population, update the Pareto 
     front approximation.
@@ -737,6 +741,8 @@ def mutate(OP_formulation, parents, population, pareto_set_approximation):
     pareto_set_approximation : dict
         A dict of non-dominated solutions, with the key-value pair 
         of permutation-solution.
+    num_to_add : int
+        The number of vertices to be added at each mutation.
 
     Returns
     -------
@@ -749,7 +755,7 @@ def mutate(OP_formulation, parents, population, pareto_set_approximation):
     # iterate through the parents
     for parent in parents:
         # apply the add operator
-        child = add(OP_formulation, parent)
+        child = add(OP_formulation, parent, num_to_add)
         # if route length constraint broken
         if child['route_length'] > OP_formulation.graph['maximum_path_length']:
             # apply the shorten operator
@@ -769,10 +775,11 @@ def mutate(OP_formulation, parents, population, pareto_set_approximation):
 
 
 # ---- IBEA4MOOP
-def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tournament_size):
-    # Initialize the Pareto front approximation as a empty dict
+def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion):
+    # Initialize variables
     pareto_set_approximation = dict()
     population = dict()
+    num_to_add = int(OP_formulation.graph['n']*add_proportion)
 
     # initialize the population
     population = initialize(OP_formulation, population,
@@ -785,7 +792,7 @@ def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tourna
             population, maximum_population_size, tournament_size)
         # mutate
         population, pareto_set_approximation = mutate(
-            OP_formulation, parents, population, pareto_set_approximation)
+            OP_formulation, parents, population, pareto_set_approximation, num_to_add)
 
     # return result
     pareto_front_approximation = []
@@ -797,59 +804,70 @@ def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tourna
     return pareto_front_approximation, pareto_set_approximation
 
 
-# %% initialization
-# global seed
-rng = np.random.default_rng(0)
+def main():
+    # %% initialization
+    # ignore 0 division warning
+    np.seterr(divide='ignore')
 
-# ignore 0 division warning
-np.seterr(divide='ignore')
+    # find the paths of all the txt files
+    txt_paths = list(
+        Path("../../../dataset/moop/2 objectives/coord").rglob("2_p21*.[tT][xX][tT]"))
 
-# find the paths of all the txt files
-txt_paths = list(
-    Path("../../../dataset/moop/2 objectives/coord").rglob("2_p21_t*.[tT][xX][tT]"))
+    # set params
+    maximum_iteration = 20
+    runs_num = 10
+    maximum_population_size = 20
+    tournament_size = 2
+    add_proportion = 0.1
 
-# set params
-maximum_iteration = 20
-runs_num = 10
-maximum_population_size = 100
-tournament_size = 2
+    # %% problem formulation
+    for txt_path in txt_paths:
+        print(txt_path.stem)
+        # init figure
+        plt.figure()
+        plt.xlabel('obj_1')
+        plt.ylabel('obj_2')
+        plt.title('Pareto front approximations')
+        # clear file
+        open('results/'+txt_path.stem+'_MOOP_front', 'w').close()
+        open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
 
-# %% problem formulation
-for txt_path in txt_paths:
-    print(txt_path.stem)
-    # init figure
-    plt.figure()
-    plt.xlabel('obj_1')
-    plt.ylabel('obj_2')
-    plt.title('Pareto front approximations')
-    # clear file
-    open('results/'+txt_path.stem+'_MOOP_front', 'w').close()
-    open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
-    for run in range(runs_num):
+        # read and parse problem
         df = pd.read_csv(txt_path, comment='/',
                          names=list(range(5)), on_bad_lines='skip', index_col=0)
         OP_formulation = formulate_OP(df)
-        pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
-            OP_formulation, maximum_iteration, maximum_population_size, tournament_size)
-        # write files
-        pareto_front_approximation = pd.DataFrame(pareto_front_approximation)
-        pareto_set_approximation = pd.DataFrame(pareto_set_approximation)
-        pareto_front_approximation_csv = pareto_front_approximation.to_csv(
-            index=False, header=False, sep=' ')
-        pareto_set_approximation_csv = pareto_set_approximation.to_csv(
-            index=False, header=False)
-        with open('results/'+txt_path.stem+'_MOOP_front', 'a') as file:
-            file.write(pareto_front_approximation_csv+'\n')
-        with open('results/'+txt_path.stem+'_MOOP_set', 'a') as file:
-            file.write(pareto_set_approximation_csv+'\n')
-        # plot fronts
-        if run < 5:
-            pareto_front_approximation = pareto_front_approximation.sort_values(
-                by=0)
-            plt.step(
-                pareto_front_approximation[0], pareto_front_approximation[1], 'o-')
-    plt.savefig('results/'+txt_path.stem+'_MOOP_front.jpg')
-    plt.close()
+
+        for run in range(runs_num):
+            # run the algorithm
+            pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
+                OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion)
+            # write files
+            pareto_front_approximation = pd.DataFrame(
+                pareto_front_approximation)
+            pareto_set_approximation = pd.DataFrame(pareto_set_approximation)
+            pareto_front_approximation_csv = pareto_front_approximation.to_csv(
+                index=False, header=False, sep=' ')
+            pareto_set_approximation_csv = pareto_set_approximation.to_csv(
+                index=False, header=False)
+            with open('results/'+txt_path.stem+'_MOOP_front', 'a') as file:
+                file.write(pareto_front_approximation_csv+'\n')
+            with open('results/'+txt_path.stem+'_MOOP_set', 'a') as file:
+                file.write(pareto_set_approximation_csv+'\n')
+            # plot fronts
+            if run < 5:
+                pareto_front_approximation = pareto_front_approximation.sort_values(
+                    by=0)
+                plt.step(
+                    pareto_front_approximation[0], pareto_front_approximation[1], 'o-')
+        plt.savefig('results/'+txt_path.stem+'_MOOP_front.jpg')
+        plt.close()
+
+
+# global seed
+rng = np.random.default_rng(0)
+
+if __name__ == "__main__":
+    main()
 
 """
 comment:

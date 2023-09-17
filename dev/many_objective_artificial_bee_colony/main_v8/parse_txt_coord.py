@@ -11,7 +11,7 @@ from math import dist
 from copy import deepcopy
 from operator import itemgetter
 import itertools
-import pickle
+from py2opt.routefinder import RouteFinder
 from pathlib import Path
 from tqdm import tqdm
 import numpy as np
@@ -283,96 +283,26 @@ def shorten(old_bee, OP_formulation):
         A bee instance.
 
     """
+    # early stop if the tour is too short
+    if len(old_bee['solution']) < 5:
+        return old_bee
+
+    # apply 2opt
     new_bee = deepcopy(old_bee)
+    # if the problem requires a tour, the distance matrix comtains all the
+    # vertices except for the last one
+    node_list = new_bee['solution'][:-1]
+    distance_matrix = nx.adjacency_matrix(
+        OP_formulation, nodelist=node_list, weight='distance').todense()
 
-    # while true
-    while True:
-        # build the distance matrix where the solution is the slant
-        rearranged_matrix = build_rearranged_matrix(new_bee, OP_formulation)
-        # loop through the lower triangle to find desirable inversions
-        desirable_inversions = find_desirable_inversions(rearranged_matrix)
-        # break if the inversion set is empty
-        if not desirable_inversions:
-            break
-        # pick the best one in each group
-        desirable_inversions = sorted(desirable_inversions, key=itemgetter(2))
-        best_inversion = desirable_inversions[-1][:2]
-        # invert the subpath in the solution
-        # the inversion index are inclusive, hence +1
-        new_bee['solution'][best_inversion[0]:best_inversion[1]+1] = \
-            new_bee['solution'][best_inversion[0]:best_inversion[1]+1][::-1]
-        # # test
-        # print(new_bee['solution'], best_inversion,
-        #       get_path_length(new_bee, OP_formulation))
+    # solve the tsp
+    route_finder = RouteFinder(distance_matrix, range(len(node_list)),
+                               iterations=1, return_to_begin=True, verbose=False)
+    _, tsp_solution = route_finder.solve()
+
+    # rearrange the solution
+    new_bee['solution'] = [new_bee['solution'][idx] for idx in tsp_solution]
     return new_bee
-
-
-def build_rearranged_matrix(bee, OP_formulation):
-    """
-    Given a bee and a OP_formulation, compose a rearranged_matrix such that the
-    solution of the bee is the slant of the rearranged_matrix
-
-    Parameters
-    ----------
-    bee : dict
-        A bee instance.
-    OP_formulation : Graph
-        A networkx graph describing the OP problem, including nodes(vertices),
-        scores, costs and best_movements.
-
-    Returns
-    -------
-    rearranged_matrix : ndarray
-        n*n array with the rearranged distance entries.
-
-    """
-    rearranged_matrix = None
-
-    # get the length of the solution and init the matrix
-    n = len(bee['solution'])
-    rearranged_matrix = np.zeros((n, n))
-    # loop through the solution
-    for rearranged_i, i in enumerate(bee['solution']):
-        # loop through the solution
-        for rearranged_j, j in enumerate(bee['solution']):
-            if rearranged_i > rearranged_j:
-                rearranged_matrix[rearranged_i, rearranged_j] = \
-                    OP_formulation.edges[(i, j)]['distance']
-    return rearranged_matrix
-
-
-def find_desirable_inversions(rearranged_matrix):
-    """
-    Given a rearranged_matrix, find the desirable inversions that reduce the
-    path length
-
-    Parameters
-    ----------
-    rearranged_matrix : ndarray
-        n*n array with the rearranged distance entries.
-
-    Returns
-    -------
-    desirable_inversions : list
-        [..., [rearranged_i, rearranged_j, delta_path_length], ...].
-
-    """
-    desirable_inversions = []
-
-    # get the size of the rearranged_matrix and init the list
-    n = rearranged_matrix.shape[0]
-    # loop i from 3 to n-1
-    for i in range(3, n):
-        # loop j from 3 to n-1
-        for j in range(0, n-3):
-            # check whether desirable if j > i+2
-            if i > j+2:
-                delta_path_length = rearranged_matrix[i, i-1] +\
-                    rearranged_matrix[j+1, j]-rearranged_matrix[i, j+1] -\
-                    rearranged_matrix[i-1, j]
-                if delta_path_length > 1e-5:
-                    desirable_inversions.append([j+1, i-1, delta_path_length])
-    return desirable_inversions
 
 
 def insert(old_bee, OP_formulation):
