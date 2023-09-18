@@ -2,10 +2,5 @@ These are the results of the new method applied on the problem sets with
 distance matrices.
 
 Notable things about this version:
-- The add operator now add random new vertex to the solution
-- The drop operator now only consider distance cost
-- The whole scheme is now more classic EA'ish: with initialization, select and
-    mutate
-- The new mutate function is added
-- The number of vertices to add at each iteration is set to be propotional to
-    the size of the problem
+- use multiprocessing to deal with the memory leaks caused by the LKH solver
+    and reduce runtime

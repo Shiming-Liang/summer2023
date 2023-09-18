@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 from matplotlib import pyplot as plt
+from functools import partial
+from multiprocessing import Pool, freeze_support
 
 
 # %% local class
@@ -317,6 +319,12 @@ def shorten(OP_formulation, old_solution):
     # throw the distance matrix into LKH
     tsp = elkai.DistanceMatrix(distance_matrix)
     tsp_solution = tsp.solve_tsp(runs=1)
+
+    # # throw the distance matrix into 2-opt
+    # route_finder = RouteFinder(distance_matrix, range(len(distance_matrix)),
+    #                            iterations=1, return_to_begin=True, verbose=False)
+    # _, tsp_solution = route_finder.solve()
+
     # get the new visited vertices
     if OP_formulation.graph['start'] == OP_formulation.graph['end']:
         # perform the swaps
@@ -804,6 +812,48 @@ def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tourna
     return pareto_front_approximation, pareto_set_approximation
 
 
+def solve_moop(maximum_iteration, runs_num, maximum_population_size, tournament_size, add_proportion, txt_path):
+    # init figure
+    plt.figure()
+    plt.xlabel('obj_1')
+    plt.ylabel('obj_2')
+    plt.title('Pareto front approximations')
+    # clear file
+    open('results/'+txt_path.stem+'_MOOP_front', 'w').close()
+    open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
+
+    # read and parse problem
+    df = pd.read_csv(txt_path, comment='/',
+                     names=list(range(5)), on_bad_lines='skip', index_col=0)
+    OP_formulation = formulate_OP(df)
+
+    for run in range(runs_num):
+        print(txt_path.stem, 'run: ', run)
+        # run the algorithm
+        pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
+            OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion)
+        # write files
+        pareto_front_approximation = pd.DataFrame(
+            pareto_front_approximation)
+        pareto_set_approximation = pd.DataFrame(pareto_set_approximation)
+        pareto_front_approximation_csv = pareto_front_approximation.to_csv(
+            index=False, header=False, sep=' ')
+        pareto_set_approximation_csv = pareto_set_approximation.to_csv(
+            index=False, header=False)
+        with open('results/'+txt_path.stem+'_MOOP_front', 'a') as file:
+            file.write(pareto_front_approximation_csv+'\n')
+        with open('results/'+txt_path.stem+'_MOOP_set', 'a') as file:
+            file.write(pareto_set_approximation_csv+'\n')
+        # plot fronts
+        if run < 5:
+            pareto_front_approximation = pareto_front_approximation.sort_values(
+                by=0)
+            plt.step(
+                pareto_front_approximation[0], pareto_front_approximation[1], 'o-')
+    plt.savefig('results/'+txt_path.stem+'_MOOP_front.jpg')
+    plt.close()
+
+
 def main():
     # %% initialization
     # ignore 0 division warning
@@ -811,7 +861,7 @@ def main():
 
     # find the paths of all the txt files
     txt_paths = list(
-        Path("../../../dataset/moop/2 objectives/coord").rglob("2_p21*.[tT][xX][tT]"))
+        Path("../../../dataset/moop/2 objectives/dmatrix").rglob("2_p*_t*.[tT][xX][tT]"))
 
     # set params
     maximum_iteration = 20
@@ -820,53 +870,20 @@ def main():
     tournament_size = 2
     add_proportion = 0.1
 
+    # define partial func
+    partial_solve_moop = partial(solve_moop, maximum_iteration, runs_num,
+                                 maximum_population_size, tournament_size, add_proportion)
+
     # %% problem formulation
-    for txt_path in txt_paths:
-        print(txt_path.stem)
-        # init figure
-        plt.figure()
-        plt.xlabel('obj_1')
-        plt.ylabel('obj_2')
-        plt.title('Pareto front approximations')
-        # clear file
-        open('results/'+txt_path.stem+'_MOOP_front', 'w').close()
-        open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
-
-        # read and parse problem
-        df = pd.read_csv(txt_path, comment='/',
-                         names=list(range(5)), on_bad_lines='skip', index_col=0)
-        OP_formulation = formulate_OP(df)
-
-        for run in range(runs_num):
-            # run the algorithm
-            pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
-                OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion)
-            # write files
-            pareto_front_approximation = pd.DataFrame(
-                pareto_front_approximation)
-            pareto_set_approximation = pd.DataFrame(pareto_set_approximation)
-            pareto_front_approximation_csv = pareto_front_approximation.to_csv(
-                index=False, header=False, sep=' ')
-            pareto_set_approximation_csv = pareto_set_approximation.to_csv(
-                index=False, header=False)
-            with open('results/'+txt_path.stem+'_MOOP_front', 'a') as file:
-                file.write(pareto_front_approximation_csv+'\n')
-            with open('results/'+txt_path.stem+'_MOOP_set', 'a') as file:
-                file.write(pareto_set_approximation_csv+'\n')
-            # plot fronts
-            if run < 5:
-                pareto_front_approximation = pareto_front_approximation.sort_values(
-                    by=0)
-                plt.step(
-                    pareto_front_approximation[0], pareto_front_approximation[1], 'o-')
-        plt.savefig('results/'+txt_path.stem+'_MOOP_front.jpg')
-        plt.close()
+    with Pool(15, maxtasksperchild=1) as pool:
+        pool.map(partial_solve_moop, txt_paths)
 
 
 # global seed
 rng = np.random.default_rng(0)
 
 if __name__ == "__main__":
+    freeze_support()
     main()
 
 """
