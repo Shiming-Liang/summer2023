@@ -837,9 +837,9 @@ def solve_moop(maximum_iteration, runs_num, maximum_population_size, tournament_
             index=False, header=False, sep=' ')
         pareto_set_approximation_csv = pareto_set_approximation.to_csv(
             index=False, header=False)
-        with open('results/'+txt_path.stem+'_MOOP_front', 'a') as file:
+        with open('results/'+txt_path.stem+'_IBEA', 'a') as file:
             file.write(pareto_front_approximation_csv+'\n')
-        with open('results/'+txt_path.stem+'_MOOP_set', 'a') as file:
+        with open('results/'+txt_path.stem+'_IBEA_set', 'a') as file:
             file.write(pareto_set_approximation_csv+'\n')
         # plot fronts
         if run < 5:
@@ -847,7 +847,7 @@ def solve_moop(maximum_iteration, runs_num, maximum_population_size, tournament_
                 by=0)
             plt.step(
                 pareto_front_approximation[0], pareto_front_approximation[1], 'o-')
-    plt.savefig('results/'+txt_path.stem+'_MOOP_front.jpg')
+    plt.savefig('results/'+txt_path.stem+'_IBEA.jpg')
     plt.close()
 
 
@@ -872,7 +872,7 @@ def main():
                                  maximum_population_size, tournament_size, add_proportion)
 
     # %% problem formulation
-    with Pool(15, maxtasksperchild=1) as pool:
+    with Pool(6, maxtasksperchild=1) as pool:
         pool.map(partial_solve_moop, txt_paths)
 
 
