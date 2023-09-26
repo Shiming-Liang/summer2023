@@ -17,9 +17,8 @@ from matplotlib import pyplot as plt
 paths = {'IBEA': {}, 'ACO': {}, 'VNS': {}}
 
 # get all the file path by keyword: *_IBEA
-directory = "./"  # Replace this with the directory you want to search in
 suffix = "_IBEA"
-paths_IBEA = glob.glob(f"{directory}/**/*{suffix}", recursive=True)
+paths_IBEA = glob.glob(f"./my_results/**/*{suffix}", recursive=True)
 
 # get the problem name
 problems = set()
@@ -32,8 +31,8 @@ problems = list(problems)
 
 # get the file path by keyword: problem name
 for problem in problems:
-    path_ACO = glob.glob(f"{directory}/**/{problem}_ACO", recursive=True)
-    path_VNS = glob.glob(f"{directory}/**/{problem}_VNS", recursive=True)
+    path_ACO = glob.glob(f"./results/**/{problem}_ACO", recursive=True)
+    path_VNS = glob.glob(f"./results/**/{problem}_VNS", recursive=True)
     paths['ACO'][problem] = path_ACO[0]
     paths['VNS'][problem] = path_VNS[0]
 

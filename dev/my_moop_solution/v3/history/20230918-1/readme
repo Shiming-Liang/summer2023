@@ -1,0 +1,6 @@
+These are the results of the new method applied on the problem sets with
+distance matrices.
+
+Notable things about this version:
+- use multiprocessing to deal with the memory leaks caused by the LKH solver
+    and reduce runtime

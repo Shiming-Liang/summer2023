@@ -819,8 +819,8 @@ def solve_moop(maximum_iteration, runs_num, maximum_population_size, tournament_
     plt.ylabel('obj_2')
     plt.title('Pareto front approximations')
     # clear file
-    open('results/'+txt_path.stem+'_MOOP_front', 'w').close()
-    open('results/'+txt_path.stem+'_MOOP_set', 'w').close()
+    open('results/'+txt_path.stem+'_IBEA', 'w').close()
+    open('results/'+txt_path.stem+'_IBEA_set', 'w').close()
 
     # read and parse problem
     df = pd.read_csv(txt_path, comment='/',
@@ -863,10 +863,12 @@ def main():
     txt_paths = list(
         Path("../../../dataset/moop/2 objectives/coord").rglob("2_p*_t*.[tT][xX][tT]"))
 
+    rng.shuffle(txt_paths)
+
     # set params
-    maximum_iteration = 20
+    maximum_iteration = 50
     runs_num = 10
-    maximum_population_size = 20
+    maximum_population_size = 50
     tournament_size = 2
     add_proportion = 0.1
 
@@ -875,8 +877,8 @@ def main():
                                  maximum_population_size, tournament_size, add_proportion)
 
     # %% problem formulation
-    with Pool(6, maxtasksperchild=1) as pool:
-        pool.map(partial_solve_moop, txt_paths)
+    with Pool(15, maxtasksperchild=1) as pool:
+        pool.map(partial_solve_moop, txt_paths, chunksize=1)
 
 
 # global seed
