@@ -14,6 +14,6 @@ paths = (os.path.join(root, filename)
 
 for path in paths:
     # keyword replace
-    newname = path.replace('MOOP_set', 'IBEA_set')
+    newname = path.replace('MOOP_front', 'IBEA')
     if newname != path:
         os.rename(path, newname)

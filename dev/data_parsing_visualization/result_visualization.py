@@ -74,8 +74,8 @@ for problem in problems:
 
     # init figure
     plt.figure()
-    plt.xlabel('obj_1')
-    plt.ylabel('obj_2')
+    plt.xlabel('objective 1')
+    plt.ylabel('objective 2')
     plt.title('Pareto front approximations')
 
     # for each run

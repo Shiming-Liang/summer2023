@@ -32,4 +32,12 @@ cities = elkai.DistanceMatrix([
     [0, 0, 0, 0]
 ])
 
+print(cities.solve_tsp(runs=1))  # Output: [0, 1, 2, 3, 0]
+
+cities.distances = [
+    [0, 4, 0],
+    [0, 0, 5],
+    [0, 0, 0]
+]
+
 print(cities.solve_tsp(runs=1))  # Output: [0, 2, 1, 0]

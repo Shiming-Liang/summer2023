@@ -270,7 +270,7 @@ def pareto_update(old_pareto_set_approximation, solution):
 
 
 # ---- shorten(OP_formulation, old_solution): new_solution
-def shorten(OP_formulation, old_solution):
+def shorten(OP_formulation, old_solution, tsp_solver):
     """
     Improve the solution by solving a TSP on the visited vertices, thereby 
     reducing the route length.
@@ -317,8 +317,8 @@ def shorten(OP_formulation, old_solution):
         distance_matrix[-1, 0] = 0
         distance_matrix[0, -1] = 0
     # throw the distance matrix into LKH
-    tsp = elkai.DistanceMatrix(distance_matrix)
-    tsp_solution = tsp.solve_tsp(runs=1)
+    tsp_solver.distances = distance_matrix
+    tsp_solution = tsp_solver.solve_tsp(runs=1)
 
     # # throw the distance matrix into 2-opt
     # route_finder = RouteFinder(distance_matrix, range(len(distance_matrix)),
@@ -732,7 +732,7 @@ def initialize(OP_formulation, population, maximum_population_size):
 
 
 # ---- mutate(OP_formulation, parents, population, pareto_set_approximation)
-def mutate(OP_formulation, parents, population, pareto_set_approximation, num_to_add):
+def mutate(OP_formulation, parents, population, pareto_set_approximation, num_to_add, tsp_solver):
     """
     Evolve the parents, add the child to the population, update the Pareto 
     front approximation.
@@ -767,7 +767,7 @@ def mutate(OP_formulation, parents, population, pareto_set_approximation, num_to
         # if route length constraint broken
         if child['route_length'] > OP_formulation.graph['maximum_path_length']:
             # apply the shorten operator
-            child = shorten(OP_formulation, child)
+            child = shorten(OP_formulation, child, tsp_solver)
         # if route length constraint still broken
         if child['route_length'] > OP_formulation.graph['maximum_path_length']:
             # apply the drop operator
@@ -783,7 +783,7 @@ def mutate(OP_formulation, parents, population, pareto_set_approximation, num_to
 
 
 # ---- IBEA4MOOP
-def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion):
+def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion, tsp_solver):
     # Initialize variables
     pareto_set_approximation = dict()
     population = dict()
@@ -800,7 +800,7 @@ def IBEA4MOOP(OP_formulation, maximum_iteration, maximum_population_size, tourna
             population, maximum_population_size, tournament_size)
         # mutate
         population, pareto_set_approximation = mutate(
-            OP_formulation, parents, population, pareto_set_approximation, num_to_add)
+            OP_formulation, parents, population, pareto_set_approximation, num_to_add, tsp_solver)
 
     # return result
     pareto_front_approximation = []
@@ -827,11 +827,14 @@ def solve_moop(maximum_iteration, runs_num, maximum_population_size, tournament_
                      names=list(range(5)), on_bad_lines='skip', index_col=0)
     OP_formulation = formulate_OP(df)
 
+    # init tsp solver
+    tsp_solver = elkai.DistanceMatrix([])
+
     for run in range(runs_num):
         print(txt_path.stem, 'run: ', run)
         # run the algorithm
         pareto_front_approximation, pareto_set_approximation = IBEA4MOOP(
-            OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion)
+            OP_formulation, maximum_iteration, maximum_population_size, tournament_size, add_proportion, tsp_solver)
         # write files
         pareto_front_approximation = pd.DataFrame(
             pareto_front_approximation)
