@@ -16,6 +16,7 @@ import pandas as pd
 from multiprocessing import Pool
 from scipy.spatial import distance_matrix
 import pickle
+from tqdm import tqdm
 
 
 # %% global constants
@@ -49,8 +50,8 @@ class MyAStar(AStar):
         # cache topology dataset for index / xy switching
         self.topo = topo
         self.topo_np = topo_np
-        self.elevation_resolution = 100
-        self.latlon_resolution = 10  # step size to find the neighbor
+        self.elevation_resolution = 20  # step size to find the neighbor
+        self.latlon_resolution = 2  # step size to find the neighbor
 
     def neighbors(self, n):
         # find the index
@@ -146,7 +147,7 @@ def get_costs_starting_from(start_goals_tuple):
         cost = get_cost(path)
         costs.append(cost)
         paths.append(path)
-        print(f'start: {start}, goal: {goal}: , cost: {cost}')
+        # print(f'start: {start}, goal: {goal}: , cost: {cost}')
 
     return costs, paths
 
@@ -163,8 +164,8 @@ def build_adjacency_matrix(latlon, reload_old_result):
         for i, start in enumerate(latlon[:-1]):
             goals = latlon[i+1:]
             start_goals_tuples.append((start, goals))
-        with Pool(15) as p:
-            tri_entries = p.map(get_costs_starting_from, start_goals_tuples)
+        with Pool() as p:
+            tri_entries = list(tqdm(p.imap(get_costs_starting_from, start_goals_tuples), total=len(start_goals_tuples)))
         # tri_entries = []
         # for start_goals_tuple in start_goals_tuples:
         #     tri_entries.append(get_costs_starting_from(start_goals_tuple))

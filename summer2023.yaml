@@ -1,0 +1,19 @@
+name: summer2023
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pandas
+  - matplotlib
+  - spyder
+  - scikit-learn
+  - ca-certificates
+  - openssl
+  - pygmo
+  - certifi
+  - memory_profiler
+  - line_profiler
+  - rasterio
+  - seaborn
+  - openpyxl
+prefix: /home/shiming/mambaforge/envs/summer2023
